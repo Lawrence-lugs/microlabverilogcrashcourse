@@ -1,3 +1,4 @@
 sims/*
 DVEfiles
 *.sh
+.nfs*
