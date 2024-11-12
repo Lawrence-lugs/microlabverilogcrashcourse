@@ -33,7 +33,7 @@ module buffer_router
 
 // DERIVED CONFIG
 wire [15:0] cfg_ofmap_width;
-assign cfg_ofmap_width = cfg_ifmap_width - kernelWidth + 1; // Assuming valid convolutions
+assign cfg_ofmap_width = cfg_ifmap_width - 3 + 1; // Assuming valid convolutions
 // TODO: Someday, add zero padding logic? :)
 
 // REGISTER FILE AND WRITING
@@ -101,7 +101,7 @@ always @ (posedge clk or negedge nrst) begin : OfmapPos
         out_pixel_loc_x <= 0;
         out_pixel_loc_y <= 0;
     end else begin
-        case (state_d)
+        case (state_q)
             S_COMPUTE: begin
                 // Traversing row-major over ofmap
                 if (out_pixel_loc_x == cfg_ofmap_width-1) begin
@@ -120,8 +120,11 @@ always @ (posedge clk or negedge nrst) begin : OfmapPos
     end
 end
 
+
+reg [dataSize-1:0] rd_data_flat [nElementsOut];
+
 always@(*) begin : ReadDataFromOfmapPos
-    case (state_d)
+    case (state_q)
         S_COMPUTE : begin
             for (int i = 0; i < kernelWidth; i++ ) begin
                 for (int j = 0; j < kernelWidth; j++ ) begin

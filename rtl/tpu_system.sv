@@ -5,7 +5,8 @@ module tpu_system #(
     parameter numOutChannel = 3,
     parameter numRegister = 256,
     localparam numAddrBuffer = $clog2(numRegister),
-    localparam outputSize = dataSize * 2 + $clog2(numInChannel) + 1,
+    // localparam outputSize = dataSize * 2 + $clog2(numInChannel) + 1,
+    localparam outputSize = 24, // to match PE
     localparam nPEy = kernelWidth*kernelWidth,
     localparam nPEx = numOutChannel
 ) (
@@ -28,13 +29,15 @@ wire router_flag_done;
 reg [7:0] process_cycle_counter;
 reg start_count;
 
+localparam nCyclesToFinish = nPEx + nPEy + 1; // nPEy = systolic buffer delay, nPEx + 1 = systolic cluster delay
+
 always @ (posedge clk or negedge nrst) begin
     if(!nrst) begin
         process_cycle_counter <= 0;
         start_count <= 0;
     end else begin
         if (router_flag_done | (process_cycle_counter != 0)) begin
-            if (process_cycle_counter == nPEx + nPEy - 1) begin
+            if (process_cycle_counter == nCyclesToFinish) begin
                 process_cycle_counter <= 0;
                 $display("PC Counter hit max");
             end else begin
@@ -44,7 +47,7 @@ always @ (posedge clk or negedge nrst) begin
     end
 end
 always @(*) begin
-    if (process_cycle_counter == nPEx + nPEy - 1) begin
+    if (process_cycle_counter == nCyclesToFinish) begin
         flag_done = 1;
     end else begin
         flag_done = 0;
@@ -53,6 +56,24 @@ end
 
 // Internal signals for connecting buffer_router to tpu_top
 wire [dataSize-1:0] buffered_activation[nPEy];
+wire [dataSize-1:0] tpu_activation_in[nPEy];
+
+// Systolic Buffering
+genvar y;
+generate
+    for (y = 1; y < nPEy; y = y + 1) begin
+        delay_chain #(
+            .dataSize   (dataSize),
+            .nDelay     (y)
+        ) u_delay_chain (
+            .d      (buffered_activation[y]),
+            .q      (tpu_activation_in[y]),
+            .clk    (clk),
+            .nrst   (nrst)
+        );
+    end
+    assign tpu_activation_in[0] = buffered_activation[0];
+endgenerate
 
 buffer_router #(
     .dataSize       (dataSize),
@@ -78,7 +99,7 @@ tpu_top #(
 ) u_tpu (
     .clk            (clk),
     .nrst           (nrst),
-    .activation     (buffered_activation), 
+    .activation     (tpu_activation_in), 
     .weight         (weight),
     .matrix_out     (matrix_out)
 );

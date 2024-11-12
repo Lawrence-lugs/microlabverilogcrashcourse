@@ -2,3 +2,6 @@ sims/*
 DVEfiles
 *.sh
 .nfs*
+synth
+mapped
+dve*

@@ -20,7 +20,7 @@ module tpu_system_tb;
     reg clk;
     reg nrst;
     reg [dataSize-1:0] weight [nPEy][nPEx];
-    wire [outputSize-1:0] matrix_out [nPEx];
+    wire signed [outputSize-1:0] matrix_out [nPEx];
     reg [numAddrBuffer-1:0] wr_addr;
     reg [dataSize-1:0] wr_data;
     reg wr_en;
