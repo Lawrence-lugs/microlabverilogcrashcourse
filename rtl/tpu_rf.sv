@@ -21,8 +21,8 @@ reg [dataSize-1:0] current_activation [0:nPEy-1];
 
 always@(posedge clk) begin
     if(!nrst) begin
-        for(int i=0;i<kernelWidth;i=i+1) begin
-            current_activation[i] <= {dataSize{1'b0}};
+        for(int i=0;i<nPEy;i=i+1) begin
+            current_activation[i] <= 0;
         end
     end else begin
         current_activation <= activation; 
