@@ -1,3 +1,23 @@
+/*
+* TPU System Module
+* 
+* This module implements a Tensor Processing Unit (TPU) system that combines:
+* - A systolic array processor (tpu_top)
+* - A buffer router for managing input activations
+* - Systolic buffering logic for proper data timing
+* 
+* The system takes weights and activations as inputs and produces matrix multiplication
+* outputs. It includes configuration parameters for data size, channels, and kernel
+* dimensions, along with control signals for operation management.
+* 
+* Key features:
+* - Configurable data sizes and dimensions
+* - Built-in systolic buffering for timing alignment
+* - Done flag generation for process completion
+* - Buffer routing for activation management
+* - Parameterized design for flexibility
+*/
+
 module tpu_system #(
     parameter dataSize = 8,
     parameter numInChannel = 1,
@@ -21,7 +41,8 @@ module tpu_system #(
     input wire wr_en,
     input wire [15:0] cfg_ifmap_width,
     input wire ctrl_start,
-    output reg flag_done
+    output reg flag_done,
+    output reg flag_valid
 );
 
 // Done logic
@@ -30,6 +51,8 @@ reg [7:0] process_cycle_counter;
 reg start_count;
 
 localparam nCyclesToFinish = nPEx + nPEy + 1; // nPEy = systolic buffer delay, nPEx + 1 = systolic cluster delay
+wire [15:0] cfg_ofmap_width;
+assign cfg_ofmap_width = cfg_ifmap_width - kernelWidth + 1; // Assuming valid convolutions
 
 always @ (posedge clk or negedge nrst) begin
     if(!nrst) begin
@@ -46,11 +69,17 @@ always @ (posedge clk or negedge nrst) begin
         end
     end
 end
+
 always @(*) begin
     if (process_cycle_counter == nCyclesToFinish) begin
         flag_done = 1;
     end else begin
         flag_done = 0;
+    end
+    if (process_cycle_counter > (nCyclesToFinish - cfg_ofmap_width**2 - 1)) begin
+        flag_valid = 1;
+    end else begin
+        flag_valid = 0;
     end
 end
 
@@ -75,6 +104,25 @@ generate
     assign tpu_activation_in[0] = buffered_activation[0];
 endgenerate
 
+logic [outputSize-1:0] matrix_out_unbuffered [nPEx];
+
+genvar x;
+generate
+    for (x = 0; x < nPEx - 1; x = x + 1) begin
+        delay_chain #(
+            .dataSize   (outputSize),
+            .nDelay     (nPEx - 1 - x)
+        ) u_delay_chain (
+            .d      (matrix_out_unbuffered[x]),
+            .q      (matrix_out[x]),
+            .clk    (clk),
+            .nrst   (nrst)
+        );
+    end
+    assign matrix_out[nPEx-1] = matrix_out_unbuffered[nPEx-1];
+endgenerate
+
+// Buffer Router
 buffer_router #(
     .dataSize       (dataSize),
     .numRegister    (numRegister),  // Standard buffer size
@@ -101,7 +149,7 @@ tpu_top #(
     .nrst           (nrst),
     .activation     (tpu_activation_in), 
     .weight         (weight),
-    .matrix_out     (matrix_out)
+    .matrix_out     (matrix_out_unbuffered)
 );
 
 endmodule
