@@ -12,7 +12,8 @@ module tpu_system_tb;
 
     // Local parameters
     localparam numAddrBuffer = $clog2(numRegister);
-    localparam outputSize = dataSize * 2 + $clog2(numInChannel) + 1;
+    // localparam outputSize = dataSize * 2 + $clog2(numInChannel) + 1;
+    localparam outputSize = 24;
     localparam nPEy = kernelWidth*kernelWidth;
     localparam nPEx = numOutChannel;
 
@@ -66,11 +67,12 @@ module tpu_system_tb;
     integer scan_result;
     integer i, j;   
 
+    integer cfg_ofmap_channels;
+    integer ofmap_extent;
+    integer ofmap_start_addr;
+
     // Test stimulus
     initial begin
-        $vcdpluson();
-        $vcdplusmemon;
-        $vcdplusfile("wave.vpd"); 
 
         // Initialize signals
         nrst = 1;
@@ -163,17 +165,33 @@ module tpu_system_tb;
         // Wait for processing to complete
         wait(flag_valid);
         $display("Matrix Outputs");
+        #(CLK_PERIOD);
         while(!flag_done) begin
+            $display("%0d,%0d,%0d \t (%0d,%0d,%0d)", 
+                matrix_out[0],
+                matrix_out[1],
+                matrix_out[2],
+                matrix_out[0][7:0],
+                matrix_out[1][7:0],
+                matrix_out[2][7:0]
+            );
             #(CLK_PERIOD);
-            $display("%0d,%0d,%0d", matrix_out[0],matrix_out[1],matrix_out[2]);
         end
         #(CLK_PERIOD*10);
 
         // Display results
         $display("Processing complete!");
-        $display("Output matrix:");
-        for (integer i = 0; i < nPEx; i++) begin
-            $display("Channel %0d: %0d", i, matrix_out[i]);
+        $display("Output matrix contents in unified buffer:");
+        cfg_ofmap_channels = 3; // Replace with configurable in pingpong update
+        ofmap_extent = (dut.u_buffer_router.cfg_ofmap_width**2) *  cfg_ofmap_channels;
+        ofmap_start_addr = dut.u_buffer_router.ofmap_start_addr;
+
+        for (int i = 0; i < ofmap_extent; i = i + 3) begin
+            $display("%d:\t %d,%d,%d",i,
+            dut.u_buffer_router.registers[ofmap_start_addr + i],
+            dut.u_buffer_router.registers[ofmap_start_addr + i + 1],
+            dut.u_buffer_router.registers[ofmap_start_addr + i + 2],
+            );
         end
 
         // End simulation
@@ -183,13 +201,13 @@ module tpu_system_tb;
 
     // Monitor flag_done
     always @(posedge flag_done) begin
-        $display("Processing completed at time %0t", $time);
+        $display("[Done Monitor] Processing completed at time %0t", $time);
     end
 
     // Monitor writes to buffer
     always @(posedge clk) begin
         if (wr_en) begin
-            $display("Writing to buffer - Address: %0d, Data: %0d", wr_addr, wr_data);
+            $display("[Buffer Write Monitor] Writing to buffer - Address: %0d, Data: %0d", wr_addr, wr_data);
         end
     end
 
@@ -197,7 +215,7 @@ module tpu_system_tb;
     parameter MAX_CYCLES = 10000;
     initial begin
         #(CLK_PERIOD*MAX_CYCLES);
-        $display("Error: Simulation timeout after %d cycles", MAX_CYCLES);
+        $display("[TWD] Error: Simulation timeout after %d cycles", MAX_CYCLES);
         $finish;
     end
 
@@ -207,4 +225,10 @@ module tpu_system_tb;
         $dumpvars(0, tpu_system_tb);
     end
 
+    // VPD
+    initial begin
+        $vcdpluson();
+        $vcdplusmemon;
+        $vcdplusfile("wave.vpd"); 
+    end
 endmodule

@@ -1,5 +1,7 @@
 
-// This buffer router 
+// Feature map dimension ordering in memory
+// Channels, Xpos, Ypos
+// Fastest-changing index is channel
 
 module buffer_router
 #(
@@ -7,12 +9,15 @@ module buffer_router
     parameter numRegister = 256,
     parameter nElementsOut = 9, // == nPEy of systolic array
 
-    // TODO: This should be configurable, but I can't figure out how to code it synthesizably
-    // nElementsOut > kernelWidth**2
-    // When it's configurable, it should only output toeplitz on SOME rows
-    // Maybe configurability is a weakness this single-flash toeplitz style
+    // Configurable with proper orchestration
+    // Param for now
     localparam kernelWidth = $sqrt(nElementsOut), 
-    localparam nAddress = $clog2(numRegister)
+    localparam nAddress = $clog2(numRegister),
+
+    // Configurable with proper orchestration
+    // Param for now
+    parameter nOfmapElements = 3, // == nPEx of systolic array, for now
+    parameter outputSize = 24
 ) ( 
     input clk,
     input nrst,
@@ -22,6 +27,10 @@ module buffer_router
     input [nAddress-1:0] wr_addr,
     input wr_en,
     output reg [dataSize-1:0] rd_data [nElementsOut],
+
+    // OFMAP writeback
+    input [outputSize-1:0] wr_data_ofmap [nOfmapElements],
+    input ofmap_valid_i,
 
     // Configuration
     input [15:0] cfg_ifmap_width,
@@ -34,7 +43,14 @@ module buffer_router
 // DERIVED CONFIG
 wire [15:0] cfg_ofmap_width;
 assign cfg_ofmap_width = cfg_ifmap_width - 3 + 1; // Assuming valid convolutions
-// TODO: Someday, add zero padding logic? :)
+
+// OFMAP WRITEBACK
+// not scalable to pingpong, need to track ifmap_start_pointer for that.
+logic [nAddress-1:0] ofmap_start_addr;
+logic [nAddress-1:0] wr_ptr_ofmap;
+always_comb begin : OfmapAddr
+    ofmap_start_addr = (cfg_ifmap_width**2); // add ifmap channels someday
+end
 
 // REGISTER FILE AND WRITING
 logic [numRegister-1:0][dataSize-1:0] registers;
@@ -43,13 +59,19 @@ always @( posedge clk or negedge nrst ) begin : RegFile
         for (int i = 0; i < numRegister; i = i + 1) begin
             registers[i] <= 0;
         end
+        wr_ptr_ofmap <= 0;
     end else begin
         if (wr_en) begin
             registers[wr_addr] <= wr_data;
         end
+        if (ofmap_valid_i) begin
+            for (int i = 0; i < nOfmapElements; i = i + 1) begin
+                registers[ofmap_start_addr + wr_ptr_ofmap + i] <= wr_data_ofmap[i];
+            end
+            wr_ptr_ofmap <= wr_ptr_ofmap + nOfmapElements;
+        end
     end
 end
-
 
 // READING LOGIC AND FSM
 reg [nAddress-1:0] out_pixel_loc_x;

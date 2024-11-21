@@ -62,7 +62,7 @@ always @ (posedge clk or negedge nrst) begin
         if (router_flag_done | (process_cycle_counter != 0)) begin
             if (process_cycle_counter == nCyclesToFinish) begin
                 process_cycle_counter <= 0;
-                $display("PC Counter hit max");
+                // $display("PC Counter hit max");
             end else begin
                 process_cycle_counter <= process_cycle_counter + 1;
             end
@@ -136,7 +136,9 @@ buffer_router #(
     .rd_data        (buffered_activation),
     .cfg_ifmap_width(cfg_ifmap_width),
     .ctrl_start     (ctrl_start),
-    .flag_done      (router_flag_done)
+    .flag_done      (router_flag_done),
+    .ofmap_valid_i  (flag_valid),
+    .wr_data_ofmap  (matrix_out)
 );
 
 tpu_top #(
