@@ -1,6 +1,5 @@
 sims/*
 DVEfiles
-*.sh
 .nfs*
 synth
 mapped

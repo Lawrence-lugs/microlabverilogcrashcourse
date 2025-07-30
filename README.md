@@ -2,11 +2,6 @@
 
 Just a TPU
 
-### Toeplitz from Buffer
+### Run from devcontainer
 
-|ofmap  |0  |0  |
-|---|---|---|
-|0,0  |0  |0  |
-|0  |0  |0  |
-|0  |0  |0  |
-|0  |0  |0  |
+Press `.` to go to `github.dev` for this workspace.

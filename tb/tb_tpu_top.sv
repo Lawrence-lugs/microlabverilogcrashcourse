@@ -225,10 +225,4 @@ module tpu_system_tb;
         $dumpvars(0, tpu_system_tb);
     end
 
-    // VPD
-    initial begin
-        $vcdpluson();
-        $vcdplusmemon;
-        $vcdplusfile("wave.vpd"); 
-    end
 endmodule
