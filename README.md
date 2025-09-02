@@ -1,14 +1,13 @@
-# TPU Thingy
+# Repository for Verilog Crash Course
 
-Just a TPU
 
-### Run from devcontainer
+
+### Run from devcontainer : Codespace
 
 Press Code > Codespace and then choose Open in Codespace for this repository.
-Then, in the open terminal, do:
 
-```
-source runme.sh
-```
+### Run from devcontainer : Local
 
-This creates a `sims` directory, goes into it, runs the simulation for the TPU using verilator, and then goes back to the main folder.
+Clone the repository locally 
+Open the folder with VSCode
+Command Palette > Open with DevContainer

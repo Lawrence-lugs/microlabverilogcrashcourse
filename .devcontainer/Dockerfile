@@ -6,10 +6,10 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     python3-pip \
     pipx \
-    verilator
+    iverilog
 
 # Install Python packages
-RUN pipx install pylint black pytest numpy
+RUN pipx install pylint black pytest numpy ipykernel
 
 # Set working directory
 WORKDIR /workspace
