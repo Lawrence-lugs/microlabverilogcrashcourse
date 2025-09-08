@@ -37,7 +37,7 @@ module queue (
                 if (tail == 2'b11) full <= 1'b1; // Queue is full after this enqueue
             end else if (deq && !empty) begin
                 // Dequeue operation
-                dout <= head == 3 ? queue_mem[head] : 0;
+                dout <= head != 3 ? queue_mem[head] : 0;
                 head <= head + 1;
                 full <= 1'b0;
                 if (head == 2'b11) empty <= 1'b1; // Queue is empty after this dequeue

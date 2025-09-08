@@ -83,6 +83,10 @@ Finally, it's time to write your own testbench.
 - For example, enqueueing 3, 4, 6, 7, 8, and then dequeueing should yield 3, 4, 6, 7, 0, since 8 did not fit into the queue.
 - Your task is to create the testbench in `tb/tb_queue.v`, confirm the proper operation of the queue, and inspect the waveform.
 
+A sample waveform is shown below:
+
+![](https://lawrence-lugs.notion.site/image/attachment%3A2619b292-370a-40b0-8ac2-200a32885196%3Awavedrom_queue.png?table=block&id=268ab8b4-50a9-80bd-a1b3-edbc0d3ede86&spaceId=378d1135-5228-4759-9c1d-b2c3e4e47feb&width=1920&userId=&cache=v2)
+
 Answer the following questions:
 1. Did you notice anything wrong with the queue? If so, what is wrong with the queue?
 2. Can you fix what is wrong with the queue?
